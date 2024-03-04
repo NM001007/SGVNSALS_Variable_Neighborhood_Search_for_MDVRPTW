@@ -91,9 +91,9 @@ if __name__ == "__main__":
                 served.extend(r)
                 seen_clients.extend(set(r))
         
-        print("\nServed Clients")
+        print("\nServed Clients:")
         print(sorted(served))
-        print(len(served), len(set(served)))
+        print("\Unserved Clients:")
         for item in list(C.keys()):
             if item not in seen_clients:
                 print("Not Seen =>", item)
