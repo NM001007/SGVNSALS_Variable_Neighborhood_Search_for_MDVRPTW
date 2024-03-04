@@ -15,7 +15,6 @@ if __name__ == "__main__":
 
     dataset_range = list(range(11, 24))
     codes = ['a', 'b']
-    dataset_range = list(range(11, 24))
     client_number = 100
     for code in codes:
         for dataset_num in dataset_range:
@@ -90,9 +89,9 @@ if __name__ == "__main__":
                     served.extend(r)
                     seen_clients.extend(set(r))
             
-            print("\nServed Clients")
+            print("\nServed Clients:")
             print(sorted(served))
-            print(len(served), len(set(served)))
+            print("\nUnserved Clients:")
             for item in list(C.keys()):
                 if item not in seen_clients:
                     print("Not Seen =>", item)
