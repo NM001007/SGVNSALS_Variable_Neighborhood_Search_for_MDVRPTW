@@ -5,7 +5,7 @@ import time
 
 if __name__ == "__main__":
 
-    dataset_range = list(range(1, 2))
+    dataset_range = list(range(1, 21))
 
     routes = dict()
     distances = dict()
