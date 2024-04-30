@@ -244,9 +244,11 @@ def initial_solution(coordinates, data_depot, lamda, customers_tw, customers_ser
 ## A solution 𝑠 is evaluated by a function 𝐹 (𝑠) that represents a weighted 
 ## sum of three objective functions to be minimized
 def evaluation_function(solutions, C, D, C_demands, C_service, C_TW, vehicles_info):
-    # print(f"Solution to Eval =>  {solution}\n")
-
     solution = copy.deepcopy(solutions)
+
+    for key in solution:
+        if type(solution[key][0]) == int:
+             solution[key] = [solution[key]]
 
     total_distances = 0 ## The total distances in all routes and depots => represented by L in the equation (12)
     No_vehicles = dict()
@@ -268,7 +270,10 @@ def evaluation_function(solutions, C, D, C_demands, C_service, C_TW, vehicles_in
         
         total_time = 0
         for route in solution[key]:
-            route = [key] + route + [key]
+            # route = [key] + route + [key]
+            route.insert(0, key)
+            route.append(key)
+
             route_dist = 0
             route_serive_time = 0
             route_delay = 0
@@ -593,8 +598,8 @@ def dest_reinst(solutions_list):
             if len(solution[rand_key][rand_route])-1:
                 c = sh_custs.pop()
                 rand_ind = random.sample(list(range(0, len(solution[rand_key][rand_route]))), k=1)[0]
+                print(c, rand_key, rand_route)
                 solution[rand_key][rand_route].insert(rand_ind, c)
-
     return solution
 
 
@@ -807,6 +812,7 @@ def path_evaluation(route, C, D, C_demands, C_service, C_TW, vehicles_info):
 
 def route_check(depot, route_, C, D, C_TW, C_service, C_demands, vehicles):
     # route = [depot]+route_+[depot]
+    # print("Route check Function:", route_)
     route = copy.deepcopy(route_)
     if len(route) <=2:
         return [route]
@@ -879,8 +885,9 @@ def route_check(depot, route_, C, D, C_TW, C_service, C_demands, vehicles):
             ind_i += 1
 
         refactored_routes.append(route[ind_j: ])
-    
-    return refactored_routes
+        return refactored_routes
+    else:
+        return [route]
 
 
 ## Algorithm 6: VND
@@ -897,6 +904,7 @@ def RVND(s, s_, success, C, D, C_demands, C_service, C_TW, vehicles_info):
         for key in s_2: 
             s_2[key] = [i for i in s_2[key] if i is not None]
             s_2[key] = [i for i in s_2[key] if i!=[]]
+
         print(f"Current Solution of the Iteration:\n {s_2}")
 
         if v == 1:
@@ -904,9 +912,11 @@ def RVND(s, s_, success, C, D, C_demands, C_service, C_TW, vehicles_info):
             if len(s_[depot]) >= 1:
                 route_index = random.sample(list(range(0, len(s_[depot]))), k=1)[0]
                 route = s_[depot][route_index]
+
                 if route in s_2[depot]:
                     s_2[depot].remove(route)
-                s_2[depot].insert(route_index, swap(route))
+                route_ = swap(route)
+                s_2[depot].insert(route_index, route_)
 
         elif v == 2:
             depot = random.sample(list(s_.keys()), k=1)[0]
@@ -959,7 +969,7 @@ def RVND(s, s_, success, C, D, C_demands, C_service, C_TW, vehicles_info):
                             three_opt_costs_min = cost
                             three_opt_result_min = path
 
-                if three_opt_result_min:                           
+                if three_opt_result_min:                   
                     s_2[depot].remove(route)
                     s_2[depot].append(three_opt_result_min)
 
@@ -1008,17 +1018,24 @@ def RVND(s, s_, success, C, D, C_demands, C_service, C_TW, vehicles_info):
                             s_2[depots[1]].remove(route_1)
                             s_2[depots[1]].append(sj)
                         else:
+                            
                             si_ = route_check(depots[0], si, C, D, C_TW, C_service, C_demands, vehicles_info)
                             sj_ = route_check(depots[1], sj, C, D, C_TW, C_service, C_demands, vehicles_info)
-                            # print("Route Check >>", si_, sj_)
+                            print("Route Check >>", si_, sj_)
 
                             s_2[depots[0]].remove(route_0)
-                            for ind in range(len(si_)):
-                                s_2[depots[0]].append(si_[ind])
+                            if type(si_[0]) == list:
+                                for ind in si_:
+                                    s_2[depots[0]].append(ind)
+                            else:
+                                s_2[depots[0]].append(si_)
 
                             s_2[depots[1]].remove(route_1)
-                            for ind in range(len(sj_)):
-                                s_2[depots[1]].append(sj_[ind])
+                            if type(sj_[0]) == list:
+                                for ind in sj_:
+                                    s_2[depots[1]].append(ind)
+                            else:
+                                s_2[depots[1]].append(sj_)
 
         elif v==9:
             depots = sorted(random.sample(list(s_.keys()), k=2))
@@ -1031,7 +1048,7 @@ def RVND(s, s_, success, C, D, C_demands, C_service, C_TW, vehicles_info):
                 vi = random.sample(route_0, k=1)[0]
 
                 si, sj = shift_1_0(route_0, route_1, vi)
-                # print("Shift 1 0 I:", vi, si,"J:", vj, sj)
+
                 if si and sj:
                     if max(len(si), len(sj)) <=2:
                         s_2[depots[0]].remove(route_0)
@@ -1045,12 +1062,22 @@ def RVND(s, s_, success, C, D, C_demands, C_service, C_TW, vehicles_info):
                         # print("Route Check >>", si_, sj_)
 
                         s_2[depots[0]].remove(s_2[depots[0]][route_0_index])
-                        for ind in range(len(si_)):
-                            s_2[depots[0]].append(si_[ind])
+                        if type(si_[0]) == list:
+                            for ind in si_:
+                                s_2[depots[0]].append(ind)
+                        else:
+                            s_2[depots[0]].append(si_)
 
                         s_2[depots[1]].remove(s_2[depots[1]][route_1_index])
-                        for ind in range(len(sj_)):
-                            s_2[depots[1]].append(sj_[ind])
+                        if type(sj_[0]) == list:
+                            for ind in sj_:
+                                s_2[depots[1]].append(ind)
+                        else:
+                            s_2[depots[1]].append(sj_)
+
+                    
+                        # print(">>> ", s_2[depots[0]])
+                        # print(">>> ", s_2[depots[1]])
 
         elif v == 10:
             depots = random.sample(list(s_.keys()), k=2)
@@ -1083,12 +1110,19 @@ def RVND(s, s_, success, C, D, C_demands, C_service, C_TW, vehicles_info):
                 depot_routes = []
                 for route in s_2[key]:
                     split_route = route_check(key, route, C, D, C_TW, C_service, C_demands, vehicles_info)
-                    for item in split_route:
-                        depot_routes.append(item)
-                s_2[key] = depot_routes
+                    if type(split_route[0]) == list:
+                        for item in split_route:
+                            depot_routes.append(item)
+                    elif type(split_route[0]) == int:
+                        depot_routes.append(split_route)
 
+                s_2[key] = depot_routes
         ################################################
         ################################################
+        for key in s_2:
+            if type(s_2[key][0]) == int:
+                s_2[key] = [s_2[key]]
+
         eval_s2 = evaluation_function(s_2, C, D, C_demands, C_service, C_TW, vehicles_info)
         eval_s_ = evaluation_function(s_, C, D, C_demands, C_service, C_TW, vehicles_info)
 
@@ -1125,7 +1159,7 @@ def single_local_search(s, s_, success, C, D, C_demands, C_service, C_TW, vehicl
     v = roullette(success)
     s_2 = copy.deepcopy(s_)
 
-    print(">> Single Local Search")
+    print(">> Single Local Search, V=", v)
 
     if v == 1:
         depot = random.sample(list(s_.keys()), k=1)[0]
@@ -1232,12 +1266,18 @@ def single_local_search(s, s_, success, C, D, C_demands, C_service, C_TW, vehicl
                     sj_ = route_check(depots[1], sj, C, D, C_TW, C_service, C_demands, vehicles_info)
 
                     s_2[depots[0]].remove(route_0)
-                    for ind in range(len(si_)):
-                        s_2[depots[0]].append(si_[ind])
+                    if type(si_[0]) == list:
+                        for ind in si_:
+                            s_2[depots[0]].append(ind)
+                    else:
+                        s_2[depots[0]].append(si_)
 
                     s_2[depots[1]].remove(route_1)
-                    for ind in range(len(sj_)):
-                        s_2[depots[1]].append(sj_[ind])
+                    if type(sj_[0]) == list:
+                        for ind in sj_:
+                            s_2[depots[1]].append(ind)
+                    else:
+                        s_2[depots[1]].append(sj_)
 
     elif v==9:
         depots = sorted(random.sample(list(s_.keys()), k=2))
@@ -1262,12 +1302,19 @@ def single_local_search(s, s_, success, C, D, C_demands, C_service, C_TW, vehicl
                         sj_ = route_check(depots[1], sj, C, D, C_TW, C_service, C_demands, vehicles_info)
 
                         s_2[depots[0]].remove(s_2[depots[0]][route_0_index])
-                        for ind in range(len(si_)):
-                            s_2[depots[0]].append(si_[ind])
+                        if type(si_[0]) == list:
+                            for ind in si_:
+                                s_2[depots[0]].append(ind)
+                        else:
+                            s_2[depots[0]].append(si_)
 
                         s_2[depots[1]].remove(s_2[depots[1]][route_1_index])
-                        for ind in range(len(sj_)):
-                            s_2[depots[1]].append(sj_[ind])
+                        if type(sj_[0]) == list:
+                            for ind in sj_:
+                                s_2[depots[1]].append(ind)
+                        else:
+                            s_2[depots[1]].append(sj_)
+
 
     elif v == 10:
         depots = random.sample(list(s_.keys()), k=2)
@@ -1305,7 +1352,10 @@ def single_local_search(s, s_, success, C, D, C_demands, C_service, C_TW, vehicl
             s_2[key] = depot_routes
 
     success = update_success(s, s_, s_2, v, success, C, D, C_demands, C_service, C_TW, vehicles_info)
-
+    for key in s_2:
+        if type(s_2[key][0]) == int:
+            s_2[key] = [s_2[key]]
+            
     return s_2, success
 
 
