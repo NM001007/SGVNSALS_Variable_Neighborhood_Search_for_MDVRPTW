@@ -1,33 +1,40 @@
 from functions import *
 from model_functions import *
 from scipy.spatial.distance import euclidean
-
+import time
 
 if __name__ == "__main__":
 
-    dataset_range = list(range(20, 21))
-    client_number = 50
+    dataset_range = list(range(1, 2))
 
     routes = dict()
     distances = dict()
     vehicle_count = dict()
-
+    RunTime = dict()
 
     for dataset_num in dataset_range:
         ## Data Preparation ##
         if dataset_num <=9:
-            data_path = "./Data/cordeau2001-mdvrptw/pr0"+str(dataset_num)+".txt"
+            data_path = "./Dataset/Public/cordeau2001-mdvrptw/pr0"+str(dataset_num)+".txt"
             ds_title = f"Cordaeu_pr0{dataset_num}"
         else:
-            data_path = "./Data/cordeau2001-mdvrptw/pr"+str(dataset_num)+".txt"
+            data_path = "./Dataset/Public/cordeau2001-mdvrptw/pr"+str(dataset_num)+".txt"
             ds_title = f"Cordaeu_pr{dataset_num}"
 
-        print("Dataset =>", ds_title)
         data_df, depot_df, vehicles, data_conf = reading_cordeu_ds(data_path)
         depot_num = len(depot_df)
 
-        if client_number >= len(data_df):
-            client_number = len(data_df)
+
+        data_df['XCOORD.'] = (data_df["XCOORD."]+100)/200
+        data_df['YCOORD.'] = (data_df["YCOORD."]+100)/200
+        data_df['DEMAND'] = data_df['DEMAND']/50 #max(data_df['DEMAND'])
+        data_df['SERVICE_TIME'] = data_df['SERVICE_TIME']/50
+        data_df['READY_TIME'] = data_df['READY_TIME']/1000
+        data_df['DUE_DATE'] = data_df['DUE_DATE']/1000
+
+        depot_df['XCOORD.'] = (depot_df["XCOORD."]+100)/200
+        depot_df['YCOORD.'] = (depot_df["YCOORD."]+100)/200
+        depot_df['DUE_DATE'] = depot_df['DUE_DATE']/1000
 
         coordinates_customers = dict()
         time_windows_customers = dict()
@@ -44,23 +51,24 @@ if __name__ == "__main__":
             time_windows_depots[index] = [depot_df["READY_TIME"][item], list(depot_df["DUE_DATE"])[item]]
             index += 1
 
-        for item in list(dict(data_df["XCOORD."]).keys())[0:client_number+1]:
+        for item in list(dict(data_df["XCOORD."]).keys()):
             coordinates_customers[index] = [data_df["XCOORD."][item], list(data_df["YCOORD."])[item]]
             time_windows_customers[index] = [data_df["READY_TIME"][item], list(data_df["DUE_DATE"])[item]]
             demands_customers[index] = list(data_df["DEMAND"])[item]
             service_times_customers[index] = list(data_df["SERVICE_TIME"])[item]
             index += 1
 
-        print("\n ======== Depots ========")
-        print("Coordinates =>\n", coordinates_depots, '\n')
+        # print("\n ======== Depots ========")
+        # print("Coordinates =>\n", coordinates_depots, '\n')
         # print("Time Windows =>\n",time_windows_depots)
 
-        print("\n ======== Customers ========")
-        print("Coordinates =>\n", coordinates_customers, '\n')
+        # print("\n ======== Customers ========")
+        # print("Coordinates =>\n", coordinates_customers, '\n')
         # print("Time Windows =>\n",time_windows_customers, '\n')
         # print("Demands =>\n",demands_customers, '\n')
         # print("Service Times =>\n",service_times_customers)
 
+        start_time = time.time()
         distance_matrix = compute_distances(list(coordinates_customers.values()))
         print("Distance Matrix Shape=> ", distance_matrix.shape)
 
@@ -71,11 +79,11 @@ if __name__ == "__main__":
         TW_C = time_windows_customers
         ServiceT_C = service_times_customers
         Demands = demands_customers
-        Vehicle_info = vehicles
-        lamda = 0.6 ## From Empirical Tests
 
+        lamda = 0.6 ## From Empirical Tests
         iterMax = 500
-        maxTime = Vehicle_info['max_T'][0]
+        maxTime = 20 #Vehicle_info['max_T'][0]
+        Vehicle_info = {'max_T': [maxTime], 'max_load': [1]}
         maxLevel = 5
         pLS1 = 0.3
         pLS2 = 0.3
@@ -91,9 +99,9 @@ if __name__ == "__main__":
                 served.extend(r)
                 seen_clients.extend(set(r))
         
-        print("\nServed Clients:")
+        print("\nServed Clients")
         print(sorted(served))
-        print("\Unserved Clients:")
+        print(len(served), len(set(served)))
         for item in list(C.keys()):
             if item not in seen_clients:
                 print("Not Seen =>", item)
@@ -133,14 +141,16 @@ if __name__ == "__main__":
 
         print("Number of vehicles =>", routes_num)
         print(evaluation_distances)
-        print(f"Mean distance in evaluation {client_number} data {np.mean(evaluation_distances)}")
-        print(f"Sum distance in evaluation {client_number} data {np.sum(evaluation_distances)}")
+        print(f"Mean distance in evaluation {len(data_df)} data {np.mean(evaluation_distances)}")
+        print(f"Sum distance in evaluation {len(data_df)} data {np.sum(evaluation_distances)}")
         print(f"Extracted Solution:\n {Export_Solution}")
 
         routes[ds_title] = Export_Solution
         distances[ds_title] = {"Mean": np.mean(evaluation_distances), "Sum": np.sum(evaluation_distances)}
         vehicle_count[ds_title] = routes_num
-        print(f"\n================ Evaluation For Client Number {client_number} Finished ======================\n")
+        finish_time = time.time()
+        RunTime[ds_title] = finish_time - start_time
+        print(f"\n================ Evaluation For Client Number {len(data_df)} Finished ======================\n")
 
     for key in routes.keys():
         print(key, "Solution: ", routes[key])
