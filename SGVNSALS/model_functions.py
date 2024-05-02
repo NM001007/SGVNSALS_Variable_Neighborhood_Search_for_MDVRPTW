@@ -338,8 +338,8 @@ def evaluation_function(solutions, C, D, C_demands, C_service, C_TW, vehicles_in
     omega_Q = float(alpha/np.average(list(C_demands.values())))
     omega_T = omega_TW = float(alpha/np.average(list(C_service.values())))
 
-    VC = vehicles_info['max_T'][0]
-    MT = vehicles_info['max_load'][0]
+    VC = vehicles_info['max_load'][0]
+    MT = vehicles_info['max_T'][0]
 
     for d in solution.keys():
         for i in range(len(solution[d])):
